@@ -50,25 +50,6 @@ def adduser_post():
     resp = jsonify(status="OK", key=key)
     return resp, 200
 
-
-@app.route('/additem', methods=['POST'])
-# Post a new item
-# Only allowed if logged in
-# Return status and id/error
-# return 
-
-@app.route('/item/<id>', methods=['GET'])
-def get_item(id):
-    # Get contents of a single <id> item
-    return
-
-@app.route('/item/<id>', methods=['DELETE'])
-def delete_item(id):
-    # Delete item <id>
-
-@app.route('/search', methods=['POST'])
-
-
 @app.route('/login', methods=['GET'])
 def login_getter():
     print(session)
@@ -129,6 +110,53 @@ def verify_post():
     if (key!='abracadabra' and v['key']!=key):
         print(v['key'])
         return jsonify(status="error"), 500        
+    db.accounts.insert(
+        {'username':v['username'], 'email':email, 'password':v['password']})
+    db.verification.remove(v)
+    return jsonify(status="OK"), 200
+
+
+
+@app.route('/additem', methods=['POST'])
+def addItem():
+    # Only allowed if logged in
+    if ('username' in session):
+        info = request.json
+        # body of item
+        content = info['content']
+        # "retweet", "reply", or null
+        childType = info['childType']
+        # ID of the original item being responded to
+        # parent = info['parent']
+        # array of media IDs
+        # media = info['media']
+        # Post a new item
+        id = db.items.insert({'content':content, 'childType':childType, 'username':session['username'], 'retweeted':0, 'timestamp':time.time()})
+        # Return status and id
+        response = jsonify(status = "OK", id = id)
+        return response, 200
+    else:
+        # Return status and error
+        response = jsonify(status = "error", error = "User not logged in.")
+		return response, 500
+
+@app.route('/item/<id>', methods=['GET'])
+def getItem(id):
+    it = db.items.find_one({'_id': id})
+    if (it != None):
+        # Get contents of a single <id> item
+        response = jsonify(status = "OK", item = {
+            id = it['_id'],
+            username = it['username'],
+            property = {likes = it['likes']},
+            retweeted = it['retweeted'],
+            content = it['content'],
+            timestamp = it['timestamp']})
+        return response, 200
+    else:
+        response = jsonify(status = "error", error = "Item with ID: " + id + " not found".)
+        return response, 500    
+
 
 @app.route('/checksession', methods=['POST', 'GET'])
 def checkingSession():
