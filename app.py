@@ -81,9 +81,7 @@ def login_post():
     resp = jsonify(status="OK")
     
     
->>>>>>> 1875ffe23f1d9c81ec6a8b3170e5e97a461315fd
-
-def filler():
+dOBef filler():
     # fill up the database with fake data to initialize the collections
     tables = {'emails':db['emails'], 'users':db['users']}
     tables['emails'].insert({'fake email'})
