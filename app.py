@@ -13,6 +13,24 @@ app = Flask(__name__)
 def adduser_getter():
     return render_template("index.html")
 
+@app.route('/additem', methods=['POST'])
+# Post a new item
+# Only allowed if logged in
+# Return status and id/error
+# return 
+
+@app.route('/item/<id>', methods=['GET'])
+def get_item(id):
+    # Get contents of a single <id> item
+    return
+
+@app.route('/item/<id>', methods=['DELETE'])
+def delete_item(id):
+    # Delete item <id>
+
+@app.route('/search', methods=['POST'])
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80, debug=True)
