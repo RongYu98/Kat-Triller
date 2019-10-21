@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 
+import pymongo
 import requests
 import datetime
 import utils
-
+import time
 
 # One database
 client = MongoClient("mongodb://localhost:27017/")
@@ -120,43 +122,92 @@ def verify_post():
 @app.route('/additem', methods=['POST'])
 def addItem():
     # Only allowed if logged in
-    if ('username' in session):
+    if ('username' in session and session['username'] != None):
         info = request.json
         # body of item
         content = info['content']
-        # "retweet", "reply", or null
-        childType = info['childType']
+        # "retweet", "reply", or null (optional)
+        if ('childType' in info):
+            if (info['childType'] == "retweet" or info['childType'] == "reply"):
+                childType = info['childType']
+            else:
+                response = jsonify(status = "error", error = "Invalid child type.")
+                return response, 500
+        else:
+            childType = None
         # ID of the original item being responded to
         # parent = info['parent']
         # array of media IDs
         # media = info['media']
         # Post a new item
-        id = db.items.insert({'content':content, 'childType':childType, 'username':session['username'], 'retweeted':0, 'timestamp':time.time()})
+        i = db.items.insert({'content':content, 'childType':childType, 'username':session['username'], 'likes':0, 'retweeted':0, 'timestamp':time.time()})
         # Return status and id
-        response = jsonify(status = "OK", id = id)
+        response = jsonify(status = "OK", id = str(i))
         return response, 200
     else:
         # Return status and error
         response = jsonify(status = "error", error = "User not logged in.")
-		return response, 500
+        return response, 500
 
 @app.route('/item/<id>', methods=['GET'])
 def getItem(id):
-    it = db.items.find_one({'_id': id})
-    if (it != None):
-        # Get contents of a single <id> item
-        response = jsonify(status = "OK", item = {
-            id = it['_id'],
-            username = it['username'],
-            property = {likes = it['likes']},
-            retweeted = it['retweeted'],
-            content = it['content'],
-            timestamp = it['timestamp']})
-        return response, 200
+    if len(id) == 24:
+        it = db.items.find_one({'_id':ObjectId(id)})
+        if (it != None):
+            # Get contents of a single <id> item
+            response = jsonify(status = "OK", item = {
+                'id':id,
+                'username':it['username'],
+                'property':{'likes':it['likes']},
+                'retweeted':it['retweeted'],
+                'content':it['content'],
+                'timestamp':it['timestamp'],
+                'childType':it['childType']})
+            return response, 200
+        else:
+            response = jsonify(status = "error", error = "Item with ID: " + id + " not found.")
+            return response, 500    
     else:
-        response = jsonify(status = "error", error = "Item with ID: " + id + " not found".)
-        return response, 500    
+        response = jsonify(status = "error", error = "Invalid ID")
+        return response, 500
 
+@app.route('/search', methods=['POST'])
+def search():
+    info = request.json
+    if ('timestamp' in info):
+        timestamp = info['timestamp']
+        if (not isinstance(timestamp, int)):
+            response = jsonify(status = "error", error = "The timestamp entered is not an integer.")
+            return response, 500
+    else:
+        # Default: current time
+        timestamp = time.time()
+    if ('limit' in info):
+        limit = info['limit']
+        if (not isinstance(limit, int)):
+            response = jsonify(status = "error", error = "The limit entered is not an integer.")
+            return response, 500
+        if (limit > 100):
+            response = jsonify(status = "error", error = "The limit has exceeded the maximum.")
+            return response, 500
+    else:
+        # Default: 25
+        limit = 25
+    cursor = db.items.find({'timestamp':{'$lt':timestamp}}).sort('timestamp', pymongo.DESCENDING).limit(limit)
+    its = []
+    for it in cursor:
+        item = {
+            'id':str(it['_id']),
+            'username':it['username'],
+            'property':{'likes':it['likes']},
+            'retweeted':it['retweeted'],
+            'content':it['content'],
+            'timestamp':it['timestamp'],
+            'childType':it['childType']
+            }
+        its.append(item)
+    response = jsonify(status = "OK", items = its)
+    return response, 200
 
 @app.route('/checksession', methods=['POST', 'GET'])
 def checkingSession():
@@ -164,7 +215,7 @@ def checkingSession():
     return jsonify(session="OK"), 200
         
     
-def filler()
+def filler():
     # fill up the database with fake data to initialize the collections
     tables = {'emails':db['emails'], 'users':db['users']}
     tables['emails'].insert({'fake email'})
