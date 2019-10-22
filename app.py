@@ -20,7 +20,7 @@ app.secret_key = 'Kats Trilling is AWESOME!'
 
 @app.route('/', methods=['GET'])
 def index_default():
-    return redirect(url_for('/adduser'))
+    return redirect(url_for('adduser_getter'))
 
 @app.route('/adduser', methods=['GET'])
 def adduser_getter():
@@ -134,11 +134,17 @@ def verify_post():
 
 
 
+@app.route('/additem', methods=['GET'])
+def additem_getter():
+    return render_template("additem.html")
+
 @app.route('/additem', methods=['POST'])
 def addItem():
     # Only allowed if logged in
     if ('username' in session and session['username'] != None):
         info = request.json
+        if (info==None):
+            info = request.form
         # body of item
         if ('content' in info):
             content = info['content']
@@ -149,6 +155,8 @@ def addItem():
         if ('childType' in info):
             if (info['childType'] == "retweet" or info['childType'] == "reply" or info['childType'] == None):
                 childType = info['childType']
+            elif (info['childType'] == "null"):
+                childType = None
             else:
                 response = jsonify(status = "error", error = "Invalid child type.")
                 return response, 500
@@ -190,28 +198,42 @@ def getItem(id):
         response = jsonify(status = "error", error = "Invalid ID")
         return response, 500
 
+@app.route('/search', methods=['GET'])
+def search_getter():
+    return render_template("search.html")
+
 @app.route('/search', methods=['POST'])
 def search():
     info = request.json
+    if (info==None):
+        info = request.form
     if ('timestamp' in info):
         timestamp = info['timestamp']
-        if (not isinstance(timestamp, float)):
-            response = jsonify(status = "error", error = "The timestamp entered is not a float.")
-            return response, 500
+        if timestamp=='':
+            timestamp = time.time()
+        else:
+            if (not isinstance(timestamp, float)):
+                response = jsonify(status = "error", error = "The timestamp entered is not a float.")
+                return response, 500
     else:
         # Default: current time
         timestamp = time.time()
+    
     if ('limit' in info):
         limit = info['limit']
-        if (not isinstance(limit, int)):
-            response = jsonify(status = "error", error = "The limit entered is not an integer.")
+        if limit == '':
+            limit = 25
+        try:
+            limit = int(limit)
+        except:
+            response = jsonify(status = "error", error = "The limit entered is not an int.")
+            return response, 500
+        if (limit < 1):
+            response = jsonify(status = "error", error = "Please enter a limit greater than 0.")
             return response, 500
         if (limit > 100):
             response = jsonify(status = "error", error = "The limit has exceeded the maximum.")
             return response, 500
-    else:
-        # Default: 25
-        limit = 25
     cursor = db.items.find({'timestamp':{'$lt':timestamp}}).sort('timestamp', pymongo.DESCENDING).limit(limit)
     its = []
     for it in cursor:
