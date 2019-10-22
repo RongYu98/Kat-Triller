@@ -20,12 +20,17 @@ app.secret_key = 'Kats Trilling is AWESOME!'
 
 @app.route('/adduser', methods=['GET'])
 def adduser_getter():
-    return render_template("index.html")
+    if 'username' not in request.args or 'password' not in request.args or 'email' not in request.args:
+        return render_template("adduser.html")
+    return adduser_post()
+    
 @app.route('/adduser', methods=['POST'])
 def adduser_post():
     print(session)
     # print(session.items())
     info = request.json
+    if (info==None):
+        info = request.args
     username = info['username'] # unique
     password = info['password']
     email = info['email'] # unique
@@ -54,19 +59,22 @@ def adduser_post():
 
 @app.route('/login', methods=['GET'])
 def login_getter():
-    print(session)
-    if (request.args['username']==None or request.args['password']==None):
+    if ('username' not in request.args or 'password' not in request.args):
+    # if (request.args['username']==None or request.args['password']==None):
         return render_template('login.html')
-    username = request.args['username']
-    password = request.args['password']
-    return requests.post('http://130.245.168.160/login',
-    # return requests.post('http://0.0.0.0/login',
-                         json={'username':username, 'password':password}).json()
+    return login_post()
+    
+    #request.json = {'username':request.args['username'],
+    #                'password':request.args['password']}
+    #request.json['username'] = request.args['username']
+    #request.json['password'] = request.args['password']
     
 @app.route('/login', methods=['POST'])
 def login_post():
     print('\n\n')
     info = request.json
+    if (info==None):
+        info = request.args
     username = info['username']
     password = info['password']
     print(info)
@@ -92,18 +100,16 @@ def logout_getter():
 
 @app.route('/verify', methods=['GET'])
 def verify_get():
-    if (request.args['key']==None or request.args['email']==None):
+    if ('key' not in request.args or 'email' not in request.args):
         return render_template('verify.html')
-    key = request.args['key']
-    email = request.args['email']
-    # bad for performance, but meh...
-    return requests.post('http://0.0.0.0/verify',
-                         json={'email':email, 'key':key}).json()
-
+    return verify_post()
+    
 @app.route('/verify', methods=['POST'])
 def verify_post():
     print('\n\n\n')
     info = request.json
+    if (info==None):
+        info = request.args
     print(info)
     email = info['email']
     key = info['key']
