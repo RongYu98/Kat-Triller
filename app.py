@@ -18,6 +18,10 @@ app = Flask(__name__)
 app.permanent_session_lifetime = datetime.timedelta(days=365)
 app.secret_key = 'Kats Trilling is AWESOME!'
 
+@app.route('/', methods=['GET'])
+def index_default():
+    return redirect(url_for('/adduser'))
+
 @app.route('/adduser', methods=['GET'])
 def adduser_getter():
     if 'username' not in request.args or 'password' not in request.args or 'email' not in request.args:
