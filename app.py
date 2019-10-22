@@ -31,7 +31,7 @@ def adduser_post():
     email = info['email'] # unique
 
     # check for uniqueness of username and email in db
-    e = db.emails.find_one({'email':email}) # first {} is for _id
+    e = db.emails.find_one({'email':email}) 
     u = db.users.find_one({'username':username})
 
     if (e!=None or u!=None): ## one or both are not unique
@@ -65,10 +65,13 @@ def login_getter():
     
 @app.route('/login', methods=['POST'])
 def login_post():
+    print('\n\n')
     info = request.json
     username = info['username']
     password = info['password']
-    acc = db.accounts.find_one({}, {username:username, password:password})
+    print(info)
+    acc = db.accounts.find_one( {'username':username, 'password':password})
+    print(acc)
     if (acc==None):
         return jsonify(status="error"), 500
     session['username'] = username
@@ -99,6 +102,7 @@ def verify_get():
 
 @app.route('/verify', methods=['POST'])
 def verify_post():
+    print('\n\n\n')
     info = request.json
     print(info)
     email = info['email']
@@ -109,8 +113,9 @@ def verify_post():
     print(v)
     if (v==None):
         return jsonify(status="error"), 500
-    if (key!='abracadabra' and v['key']!=key):
+    if (key!='abracadabra' and v['key'][1:-1]!=key):
         print(v['key'])
+        print(key)
         return jsonify(status="error"), 500        
     db.accounts.insert(
         {'username':v['username'], 'email':email, 'password':v['password']})
@@ -125,10 +130,14 @@ def addItem():
     if ('username' in session and session['username'] != None):
         info = request.json
         # body of item
-        content = info['content']
+        if ('content' in info):
+            content = info['content']
+        else:
+            response = jsonify(status = "error", error = "Empty content.")
+            return response, 500
         # "retweet", "reply", or null (optional)
         if ('childType' in info):
-            if (info['childType'] == "retweet" or info['childType'] == "reply"):
+            if (info['childType'] == "retweet" or info['childType'] == "reply" or info['childType'] == None):
                 childType = info['childType']
             else:
                 response = jsonify(status = "error", error = "Invalid child type.")
@@ -176,8 +185,8 @@ def search():
     info = request.json
     if ('timestamp' in info):
         timestamp = info['timestamp']
-        if (not isinstance(timestamp, int)):
-            response = jsonify(status = "error", error = "The timestamp entered is not an integer.")
+        if (not isinstance(timestamp, float)):
+            response = jsonify(status = "error", error = "The timestamp entered is not a float.")
             return response, 500
     else:
         # Default: current time

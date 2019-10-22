@@ -9,18 +9,23 @@ def generateKey():
     return '<'+r_string+'>'
 
 # sender = "Pur-Religion <ubuntu@cse356-project.cloud.compas.cs.stonybrook.edu>>"
+sender = "Kat Triller <ubuntu@cse356-project.cloud.compas.cs.stonybrook.edu>"
 def sendEmail(key_string, reciever):
     message ="""
-From: Kat Triller <ubuntu@cse356-project.cloud.compas.cs.stonybrook.edu>
-To: {} <{}>
+From: Kat Triller
+To: {} 
 Subject: Our New Religion
 
 Are you interested in joining our new religion of cat trilling?
 See secret key below:
-{}""".format(reciever, reciever, key_string)
+validation key: {}""".format(reciever, key_string)
+    print(message)
+    print('\n\n')
+    receivers = [reciever]
     try:
         smtpObj = smtplib.SMTP('localhost')
         smtpObj.sendmail(sender, receivers, message)
-    except:
+    except Exception as e:
+        print(e)
         print("Let us trill in unison")
         
