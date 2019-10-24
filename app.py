@@ -205,16 +205,18 @@ def search_getter():
 @app.route('/search', methods=['POST'])
 def search():
     info = request.json
-    if (info==None):
+    if (info == None):
         info = request.form
     if ('timestamp' in info):
         timestamp = info['timestamp']
-        if timestamp=='':
+        if timestamp == '':
             timestamp = time.time()
-        else:
-            if (not isinstance(timestamp, float)):
-                response = jsonify(status = "error", error = "The timestamp entered is not a float.")
-                return response, 500
+        try:
+            timestamp = float(timestamp)
+        except:
+            #if (not isinstance(timestamp, float) or not isinstance(timestamp, int)):
+            response = jsonify(status = "error", error = "The timestamp entered is neither an int nor a float.")
+            return response, 500
     else:
         # Default: current time
         timestamp = time.time()
@@ -234,6 +236,9 @@ def search():
         if (limit > 100):
             response = jsonify(status = "error", error = "The limit has exceeded the maximum.")
             return response, 500
+    else:
+        # Default: 25
+        limit = 25
     cursor = db.items.find({'timestamp':{'$lt':timestamp}}).sort('timestamp', pymongo.DESCENDING).limit(limit)
     its = []
     for it in cursor:
