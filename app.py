@@ -130,6 +130,102 @@ def verify_post():
     db.accounts.insert(
         {'username':v['username'], 'email':email, 'password':v['password']})
     db.verification.remove(v)
+    db.stats.insert(
+        {'username':v['username'], 'email':email, 'followers':[], 'following':[]})
+        # followers and following is an array, because once someone follows, they get put in array
+        # and once you are following, you're put in their array
+    return jsonify(status="OK"), 200
+
+@app.route('/user/<username>', methods=['GET'])
+def find_user(username):
+    userInfo = db.stats.find_one({'username':username})
+    if (userInfo==None):
+        return (jsonify(status="error"), 500)
+    
+    userStats = {"email":userInfo['email'], "followers":len(userInfo["followers"]),
+                 "following":len(userInfo["following"])}
+    resp = jsonify(status="OK", user=userStats)
+    return resp, 200
+@app.route('/user/<username>/followers', methods=['GET'])
+def find_user_followers(username):
+    limit = 50
+    if ("limit" in request.args):
+        limit = request.args
+    if limit < 0 or limit > 200:
+        return (jsonify(status="error"), 500)
+    
+    userInfo = db.stats.find_one({'username':username})
+    if (userInfo==None):
+        return (jsonify(status="error"), 500)
+    followers = userInfo['followers'][:limit]
+    return jsonify(status="OK", users=followers), 200
+@app.route('/user/<username>/following', methods=['GET'])
+def find_user_following(username):
+    limit = 50
+    if ("limit" in request.args):
+        limit = request.args
+    if limit < 0 or limit > 200:
+        return (jsonify(status="error"), 500)
+    userInfo = db.stats.find_one({'username':username})
+    if (userInfo==None):
+        return (jsonify(status="error"), 500)
+    following = userInfo['following'][:limit]
+    return jsonify(status="OK", users=following), 200
+
+
+@app.route('/follow', methods=['GET'])
+def follow_user_getter():
+    return render_template('follow_user.html')
+@app.route('/follow', methods=['POST'])
+def follow_user_poster():
+    if ('username' not in session or session['username']==None):
+        return jsonify(status="error"), 500
+    info = request.json
+    if (info==None):
+        info = request.form
+    username = info["username"]
+    if ('follow' not in info):
+        follow=True
+    else:
+        follow = True if info["follow"]=="True" else False
+    print(follow)
+    print(info["follow"])
+
+    # get the user the client wants to follow
+    userInfo = db.stats.find_one({'username':username})
+    if (userInfo==None):
+        return (jsonify(status="error"), 500)
+    # get the followers list, and adjust it depending on selection
+    followers = userInfo['followers']
+    if (follow):
+        followers.append(session['username'])
+    else:
+        if (username in followers):
+            followers.remove(username)
+
+    db.stats.update_one({
+        'username':username
+    }, {'$set':
+        {'followers':followers}
+    })
+    
+    # update the client data                 
+    currentUser = db.stats.find_one({'username':session['username']})
+    if (currentUser==None):
+        return (jsonify(status="error"), 500)
+    # get the following list, and adjust it depending on selection
+    following = currentUser['following']
+    if (follow):
+        following.append(username)
+    else:
+        if (username in following):
+            following.remove(username)
+    db.stats.update_one({
+        'username':session['username']
+    }, {'$set':
+        {'following':following}
+    }) # upsert = false, because we don't want to insert if DNE
+                
     return jsonify(status="OK"), 200
 
 
