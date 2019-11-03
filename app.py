@@ -151,7 +151,7 @@ def find_user(username):
 def find_user_followers(username):
     limit = 50
     if ("limit" in request.args):
-        limit = request.args
+        limit = request.args["limit"]
     if limit < 0 or limit > 200:
         return (jsonify(status="error"), 500)
     
