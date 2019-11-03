@@ -272,21 +272,32 @@ def addItem():
         response = jsonify(status = "error", error = "User not logged in.")
         return response, 500
 
-@app.route('/item/<id>', methods=['GET'])
+@app.route('/item/<id>', methods=['GET', 'DELETE'])
 def getItem(id):
     if len(id) == 24:
-        it = db.items.find_one({'_id':ObjectId(id)})
+        query = {'_id':ObjectId(id)}
+        it = db.items.find_one(query)
         if (it != None):
-            # Get contents of a single <id> item
-            response = jsonify(status = "OK", item = {
-                'id':id,
-                'username':it['username'],
-                'property':{'likes':it['likes']},
-                'retweeted':it['retweeted'],
-                'content':it['content'],
-                'timestamp':it['timestamp'],
-                'childType':it['childType']})
-            return response, 200
+            if request.method == 'GET':
+                # Get contents of a single <id> item
+                response = jsonify(status = "OK", item = {
+                    'id':id,
+                    'username':it['username'],
+                    'property':{'likes':it['likes']},
+                    'retweeted':it['retweeted'],
+                    'content':it['content'],
+                    'timestamp':it['timestamp'],
+                    'childType':it['childType']})
+                return response, 200
+            if request.method == 'DELETE':
+                # Only allowed if logged in and username matches
+                if ('username' in session and session['username'] != None and it['username'] == session['username']):
+                    db.items.delete_one(query)
+                    response = jsonify(status = "OK")
+                    return response, 200
+                else:
+                    response = jsonify(status = "error")
+                    return response, 500
         else:
             response = jsonify(status = "error", error = "Item with ID: " + id + " not found.")
             return response, 500    
@@ -303,6 +314,7 @@ def search():
     info = request.json
     if (info == None):
         info = request.form
+    # Check timestamp
     if ('timestamp' in info):
         timestamp = info['timestamp']
         if timestamp == '':
@@ -310,17 +322,15 @@ def search():
         try:
             timestamp = float(timestamp)
         except:
-            #if (not isinstance(timestamp, float) or not isinstance(timestamp, int)):
             response = jsonify(status = "error", error = "The timestamp entered is neither an int nor a float.")
             return response, 500
     else:
         # Default: current time
         timestamp = time.time()
-    
-    if ('limit' in info):
+    query = {'timestamp':{'$lt':timestamp}}
+    # Check limit
+    if ('limit' in info and info['limit'] != ''):
         limit = info['limit']
-        if limit == '':
-            limit = 25
         try:
             limit = int(limit)
         except:
@@ -335,7 +345,60 @@ def search():
     else:
         # Default: 25
         limit = 25
-    cursor = db.items.find({'timestamp':{'$lt':timestamp}}).sort('timestamp', pymongo.DESCENDING).limit(limit)
+    # Check query string
+    if ('q' in info and info['q'] != ''):
+        q = info['q']
+        if (type(q) != str):
+            response = jsonify(status = "error", error = "Query is not a string.")
+            return response, 500
+        words = q.split()
+        if (len(words) == 1):
+            word = words[0]
+            query['content'] = {'$regex': '(?:^|\W)' + word + '(?:$|\W)'}
+        else:
+            regStr = ""
+            first = True
+            for word in words:
+                if not first:
+                    regStr += '|'
+                else:
+                    first = False
+                regStr += '(?:^|\W)' + word + '(?:$|\W)'
+            query['content'] = {'$regex': regStr}
+    # Check username
+    if ('username' in info and info['username'] != ''):
+        username = info['username']
+        if (type(username) != str):
+            response = jsonify(status = "error", error = "Username is not a string.")
+            return response, 500
+        query['username'] = username
+    # Check following
+    if ('following' in info):
+        following = info['following']
+        if (following == "True"):
+            following = True
+        elif (following == "False"):
+            following = False
+        elif (type(following) != bool):
+            response = jsonify(status = "error", error = "Following is not True or False.")
+            return response, 500
+    else:
+        # Default: true
+        following = True
+    if (following and 'username' in session and session['username'] != None):
+        userStats = db.stats.find_one({'username':session['username']})
+        if (userStats):
+            followingUser = userStats['following']
+            if (len(followingUser) == 0):
+                query['username'] = None
+            elif (len(followingUser) == 1):
+                query['username'] = followingUser[0]
+            else:
+                usernames = []
+                for user in followingUser:
+                    usernames.append({'username': user})
+                query['$or'] = usernames
+    cursor = db.items.find(query).sort('timestamp', pymongo.DESCENDING).limit(limit)
     its = []
     for it in cursor:
         item = {
@@ -351,11 +414,38 @@ def search():
     response = jsonify(status = "OK", items = its)
     return response, 200
 
+@app.route('/user/<username>/posts', methods=['GET'])
+def userPosts(username):
+    if ('limit' in request.args):
+        limit = request.args['limit']
+        if limit == '':
+            limit = 50
+        try:
+            limit = int(limit)
+        except:
+            response = jsonify(status = "error")
+            return response, 500
+        if (limit < 1):
+            response = jsonify(status = "error")
+            return response, 500
+        if (limit > 200):
+            response = jsonify(status = "error")
+            return response, 500
+    else:
+        # Default: 50
+        limit = 50
+    query = {'username':username}
+    cursor = db.items.find(query).limit(limit)
+    ids = []
+    for it in cursor:
+        ids.append(str(it['_id']))
+    response = jsonify(status = "OK", items = ids)
+    return response, 200
+
 @app.route('/checksession', methods=['POST', 'GET'])
 def checkingSession():
     print(session)
     return jsonify(session="OK"), 200
-        
     
 def filler():
     # fill up the database with fake data to initialize the collections
