@@ -78,7 +78,8 @@ def login_post():
     print('\n\n')
     info = request.json
     if (info==None):
-        info = request.args
+        # info = request.args
+        info = request.form
     username = info['username']
     password = info['password']
     print(info)
