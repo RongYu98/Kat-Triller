@@ -145,6 +145,7 @@ def find_user(username):
     
     userStats = {"email":userInfo['email'], "followers":len(userInfo["followers"]),
                  "following":len(userInfo["following"])}
+    print(userStats)
     resp = jsonify(status="OK", user=userStats)
     return resp, 200
 @app.route('/user/<username>/followers', methods=['GET'])
@@ -152,9 +153,10 @@ def find_user_followers(username):
     limit = 50
     if ("limit" in request.args):
         limit = request.args["limit"]
-    if limit < 0 or limit > 200:
+    if limit < 0: # or limit > 200:
         return (jsonify(status="error"), 500)
-    
+    if limit > 200:
+        limit = 200
     userInfo = db.stats.find_one({'username':username})
     if (userInfo==None):
         return (jsonify(status="error"), 500)
@@ -165,8 +167,10 @@ def find_user_following(username):
     limit = 50
     if ("limit" in request.args):
         limit = request.args
-    if limit < 0 or limit > 200:
+    if limit < 0:# or limit > 200:
         return (jsonify(status="error"), 500)
+    if limit > 200:
+        limit = 200
     userInfo = db.stats.find_one({'username':username})
     if (userInfo==None):
         return (jsonify(status="error"), 500)
@@ -184,13 +188,15 @@ def follow_user_poster():
     info = request.json
     if (info==None):
         info = request.form
+    print("USERNAME: "+session['username']+" "+"PROFILE: "+info["username"])
     username = info["username"]
     if ('follow' not in info):
         follow=True
     else:
-        follow = True if info["follow"]=="True" else False
-    print(follow)
-    print(info["follow"])
+        if (info["follow"]==True):
+            follow = True
+        else:
+            follow = True if info["follow"]=="True" else False
 
     # get the user the client wants to follow
     userInfo = db.stats.find_one({'username':username})
@@ -201,14 +207,16 @@ def follow_user_poster():
     if (follow):
         followers.append(session['username'])
     else:
-        if (username in followers):
-            followers.remove(username)
+        if (session['username'] in followers):
+            followers.remove(session['username'])
+    followers = list(set(followers))
 
     db.stats.update_one({
         'username':username
     }, {'$set':
         {'followers':followers}
     })
+    print("The number of followers: "+str(len(followers)))
     
     # update the client data                 
     currentUser = db.stats.find_one({'username':session['username']})
@@ -221,12 +229,13 @@ def follow_user_poster():
     else:
         if (username in following):
             following.remove(username)
+    following = list(set(following))
+    print("The number of following: "+str(len(following)))
     db.stats.update_one({
         'username':session['username']
     }, {'$set':
         {'following':following}
     }) # upsert = false, because we don't want to insert if DNE
-                
     return jsonify(status="OK"), 200
 
 
@@ -341,8 +350,9 @@ def search():
             response = jsonify(status = "error", error = "Please enter a limit greater than 0.")
             return response, 500
         if (limit > 100):
-            response = jsonify(status = "error", error = "The limit has exceeded the maximum.")
-            return response, 500
+            # response = jsonify(status = "error", error = "The limit has exceeded the maximum.")
+            # return response, 500
+            limit = 100
     else:
         # Default: 25
         limit = 25
@@ -355,7 +365,7 @@ def search():
         words = q.split()
         if (len(words) == 1):
             word = words[0]
-            query['content'] = {'$regex': '(?:^|\W)' + word + '(?:$|\W)'}
+            query['content'] = {'$regex': '(?:^|\W)' + word + '(?:$|\W)', '$options': 'i'}
         else:
             regStr = ""
             first = True
@@ -365,7 +375,7 @@ def search():
                 else:
                     first = False
                 regStr += '(?:^|\W)' + word + '(?:$|\W)'
-            query['content'] = {'$regex': regStr}
+            query['content'] = {'$regex': regStr, '$options': 'i'}
     # Check username
     if ('username' in info and info['username'] != ''):
         username = info['username']
@@ -430,8 +440,9 @@ def userPosts(username):
             response = jsonify(status = "error")
             return response, 500
         if (limit > 200):
-            response = jsonify(status = "error")
-            return response, 500
+            # response = jsonify(status = "error")
+            # return response, 500
+            limit = 200
     else:
         # Default: 50
         limit = 50
