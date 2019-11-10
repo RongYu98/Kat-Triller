@@ -282,6 +282,31 @@ def addItem():
         response = jsonify(status = "error", error = "User not logged in.")
         return response, 500
 
+@app.route('/delete_item', methods=['GET'])
+def delete_item_finder():
+    return render_template("delete.html")
+@app.route('/delete_item', methods=['POST'])
+def delete_item():
+    info = request.form
+    if ("item_id" not in request.form):
+        return jsonify(status="error")
+    itemID = info['item_id']
+
+    if len(itemID) == 24:
+        query = {'_id':ObjectId(itemID)}
+        it = db.items.find_one(query)
+        if (it != None):
+            if ('username' in session and
+                session['username'] != None and
+                it['username'] == session['username']):
+                    db.items.delete_one(query)
+                    response = jsonify(status = "OK")
+                    return response, 200
+            else:
+                response = jsonify(status = "error")
+                return response, 500
+    response = jsonify(status = "error")
+    return response, 500
 @app.route('/item/<id>', methods=['GET', 'DELETE'])
 def getItem(id):
     if len(id) == 24:
