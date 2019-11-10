@@ -11,8 +11,9 @@ import time
 # One database
 client = MongoClient("mongodb://localhost:27017/")
 db = client["kt_db"]
-# tablename = client['table_name'] 
-# https://www.w3schools.com/python/python_mongodb_create_collection.asp
+
+# Cassandra:
+from cassandra.cluster import Cluster
 
 app = Flask(__name__)
 app.permanent_session_lifetime = datetime.timedelta(days=365)
@@ -479,11 +480,25 @@ def userPosts(username):
     response = jsonify(status = "OK", items = ids)
     return response, 200
 
-@app.route('/checksession', methods=['POST', 'GET'])
-def checkingSession():
-    print(session)
-    return jsonify(session="OK"), 200
-    
+@app.route('/addmedia', methods=["GET"])
+def add_media_getter():
+    return render_template("addmedia.html")
+@app.route('/addmedia', methods=["POST"])
+def add_media():
+    if ('username' not in session or session['username']==None):
+        return jsonify(status="error", error="not logged in")
+    # info = request.form
+    # I think this is the thing? OR is it request.file?
+    # info['content']
+
+    cluster = Cluster()
+    session = cluster.connect("media_files")
+
+    file_id = TIME.time()
+    contents = request.files['contents'].read()
+    session.execute("INSERT INTO hw6.img (img_id, users, img_content) VALUES (%s, %s)", (file_id, 0, buffer(contents)))
+    return {"status":"OK", id:"file_id"}
+
 def filler():
     # fill up the database with fake data to initialize the collections
     tables = {'emails':db['emails'], 'users':db['users']}
