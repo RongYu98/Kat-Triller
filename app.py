@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
@@ -274,7 +274,7 @@ def addItem():
         # array of media IDs
         # media = info['media']
         # Post a new item
-        i = db.items.insert({'content':content, 'childType':childType, 'username':session['username'], 'likes':0, 'retweeted':0, 'timestamp':time.time()})
+        i = db.items.insert({'content':content, 'childType':childType, 'username':session['username'], 'likes':[], 'retweeted':0, 'timestamp':time.time()})
         # Return status and id
         response = jsonify(status = "OK", id = str(i))
         return response, 200
@@ -319,7 +319,7 @@ def getItem(id):
                 response = jsonify(status = "OK", item = {
                     'id':id,
                     'username':it['username'],
-                    'property':{'likes':it['likes']},
+                    'property':{'likes':len(it['likes'])},
                     'retweeted':it['retweeted'],
                     'content':it['content'],
                     'timestamp':it['timestamp'],
@@ -441,7 +441,7 @@ def search():
         item = {
             'id':str(it['_id']),
             'username':it['username'],
-            'property':{'likes':it['likes']},
+            'property':{'likes':len(it['likes'])},
             'retweeted':it['retweeted'],
             'content':it['content'],
             'timestamp':it['timestamp'],
@@ -483,6 +483,7 @@ def userPosts(username):
 @app.route('/addmedia', methods=["GET"])
 def add_media_getter():
     return render_template("addmedia.html")
+
 @app.route('/addmedia', methods=["POST"])
 def add_media():
     if ('username' not in session or session['username']==None):
@@ -492,12 +493,74 @@ def add_media():
     # info['content']
 
     cluster = Cluster()
-    session = cluster.connect("media_files")
+    cass = cluster.connect("kattriller")
 
-    file_id = TIME.time()
+    file_id = float(time.time())
     contents = request.files['contents'].read()
-    session.execute("INSERT INTO hw6.img (img_id, users, img_content) VALUES (%s, %s)", (file_id, 0, buffer(contents)))
-    return {"status":"OK", id:"file_id"}
+    cass.execute("INSERT INTO media (img_id, itm_cnt, content) VALUES (%s, %s, %s)", (float(file_id), 0, memoryview(contents)))
+    return jsonify(status="OK", id=file_id)
+@app.route('/media/<media_id>', methods=['GET'])
+def get_media(media_id):
+    cluster = Cluster()
+    session = cluster.connect("kattriller")
+    x = "SELECT * FROM media WHERE img_id=%s".format(str(media_id))
+    
+    stuff = session.execute("SELECT * FROM media WHERE img_id=%s", [float(media_id)])
+        
+    #"SELECT img_content FROM hw6.img WHERE img_filename=%s", [info['filename']])
+    print(stuff)
+    print(type(stuff))
+    print(stuff)
+    stuff =  stuff[0].content
+    resp =  make_response(stuff)
+    resp.headers.set('Content-Type', 'image/jpeg')
+    # resp.headers.set('Content-Type', contentType)
+    return resp
+
+    
+@app.route('/item_liker', methods=['GET'])
+def item_liker_getter():
+    return render_template("likeItem.html")
+@app.route('/item_liker', methods=['POST'])
+def item_liker_poster():
+    data = request.form['item_id']
+    return like_item_post(data)
+    
+@app.route('/item/<item_id>/like', methods=['POST'])
+def like_item_post(item_id):
+    info = request.json
+    if ('username' not in session or session['username']==None):
+        return jsonify(status="error", error="not logged in")
+    print(item_id)
+    if (info==None):
+        info = request.values
+        print(info["like"])
+        toLike = True if info["like"]=="True" else False
+    else:
+        toLike = True if "like" not in info or info["like"] else False
+        
+    item = db.items.find_one({'_id':ObjectId(item_id)})
+    if (item==None):
+        return jsonify(status="error", error="Not found")
+
+    likes = item["likes"]
+    if (session['username'] not in likes):
+        if (toLike):
+            likes.append(session['username'])
+    else:
+        if (not toLike): # and username is in likes
+            likes.remove(session['username'])
+
+    print(toLike)
+    print(likes)
+    db.items.update_one({
+	'_id':ObjectId(item_id)
+    }, {'$set':
+	{'likes':likes}
+    })
+    
+    return jsonify(status="OK")
+
 
 def filler():
     # fill up the database with fake data to initialize the collections
