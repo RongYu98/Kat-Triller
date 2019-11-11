@@ -132,7 +132,7 @@ def verify_post():
     db.accounts.insert(
         {'username':v['username'], 'email':email, 'password':v['password']})
     db.verification.remove(v)
-    db.stats.insert(
+    db.stat.insert(
         {'username':v['username'], 'email':email, 'followers':[], 'following':[]})
         # followers and following is an array, because once someone follows, they get put in array
         # and once you are following, you're put in their array
@@ -140,7 +140,7 @@ def verify_post():
 
 @app.route('/user/<username>', methods=['GET'])
 def find_user(username):
-    userInfo = db.stats.find_one({'username':username})
+    userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
         return (jsonify(status="error"), 500)
     
@@ -158,7 +158,7 @@ def find_user_followers(username):
         return (jsonify(status="error"), 500)
     if limit > 200:
         limit = 200
-    userInfo = db.stats.find_one({'username':username})
+    userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
         return (jsonify(status="error"), 500)
     followers = userInfo['followers'][:limit]
@@ -172,7 +172,7 @@ def find_user_following(username):
         return (jsonify(status="error"), 500)
     if limit > 200:
         limit = 200
-    userInfo = db.stats.find_one({'username':username})
+    userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
         return (jsonify(status="error"), 500)
     following = userInfo['following'][:limit]
@@ -200,7 +200,7 @@ def follow_user_poster():
             follow = True if info["follow"]=="True" else False
 
     # get the user the client wants to follow
-    userInfo = db.stats.find_one({'username':username})
+    userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
         return (jsonify(status="error"), 500)
     # get the followers list, and adjust it depending on selection
@@ -212,7 +212,7 @@ def follow_user_poster():
             followers.remove(session['username'])
     followers = list(set(followers))
 
-    db.stats.update_one({
+    db.stat.update_one({
         'username':username
     }, {'$set':
         {'followers':followers}
@@ -220,7 +220,7 @@ def follow_user_poster():
     print("The number of followers: "+str(len(followers)))
     
     # update the client data                 
-    currentUser = db.stats.find_one({'username':session['username']})
+    currentUser = db.stat.find_one({'username':session['username']})
     if (currentUser==None):
         return (jsonify(status="error"), 500)
     # get the following list, and adjust it depending on selection
@@ -232,7 +232,7 @@ def follow_user_poster():
             following.remove(username)
     following = list(set(following))
     print("The number of following: "+str(len(following)))
-    db.stats.update_one({
+    db.stat.update_one({
         'username':session['username']
     }, {'$set':
         {'following':following}
@@ -269,12 +269,25 @@ def addItem():
                 return response, 500
         else:
             childType = None
-        # ID of the original item being responded to
-        # parent = info['parent']
+        # ID of the original item being responded to or retweeted
+        if ('parent' in info):
+            parent = info['parent']
+        else:
+            parent = None
         # array of media IDs
-        # media = info['media']
+        if ('media' in info):
+            media = info['media']
+        else:
+            media = []
         # Post a new item
-        i = db.items.insert({'content':content, 'childType':childType, 'username':session['username'], 'likes':[], 'retweeted':0, 'timestamp':time.time()})
+        i = db.items.insert({'content':content, 'childType':childType, 'parent':parent, 'media':media, 'username':session['username'], 'likes':[], 'retweeted':0, 'interest':0, 'timestamp':time.time()})
+        if (childType == "retweet"):
+            query = {'_id':ObjectId(parent)}
+            item = db.items.find_one(query)
+            retweeted = item['retweeted'] + 1
+            interest = item['interest'] + 1
+            values = {"$set": {"retweeted": retweeted, "interest": interest}}
+            db.items.update_one(query, values)
         # Return status and id
         response = jsonify(status = "OK", id = str(i))
         return response, 200
@@ -300,6 +313,11 @@ def delete_item():
             if ('username' in session and
                 session['username'] != None and
                 it['username'] == session['username']):
+                    medArr = db.items.find_one(query)['media']
+                    cluster = Cluster()
+                    cass = cluster.connect("kattriller")
+                    for imgID in medArr:
+                        cass.execute("DELETE FROM media WHERE img_id = %s", imgID)
                     db.items.delete_one(query)
                     response = jsonify(status = "OK")
                     return response, 200
@@ -323,7 +341,9 @@ def getItem(id):
                     'retweeted':it['retweeted'],
                     'content':it['content'],
                     'timestamp':it['timestamp'],
-                    'childType':it['childType']})
+                    'childType':it['childType'],
+                    'parent':it['parent'],
+                    'media':it['media']})
                 return response, 200
             if request.method == 'DELETE':
                 # Only allowed if logged in and username matches
@@ -423,7 +443,7 @@ def search():
         # Default: true
         following = True
     if (following and 'username' in session and session['username'] != None):
-        userStats = db.stats.find_one({'username':session['username']})
+        userStats = db.stat.find_one({'username':session['username']})
         if (userStats):
             followingUser = userStats['following']
             if (len(followingUser) == 0):
@@ -435,7 +455,59 @@ def search():
                 for user in followingUser:
                     usernames.append({'username': user})
                 query['$or'] = usernames
-    cursor = db.items.find(query).sort('timestamp', pymongo.DESCENDING).limit(limit)
+   # Check parent
+    if ('parent' in info and info['parent'] != ''):
+        parent = info['parent']
+    else:
+        # Default: none
+        parent = None
+    # Check replies
+    if ('replies' in info):
+        replies = info['replies']
+        if (replies == "True"):
+            replies = True
+        elif (replies == "False"):
+            replies = False
+        elif (type(hasMedia) != bool):
+            response = jsonify(status = "error", error = "Replies is not True or False.")
+            return response
+    else:
+        # Default: true
+        replies = True
+    if replies:
+        if parent:
+            query['parent'] = parent
+    else:
+        query['childType'] = {'$ne' : "replies"}
+    # Check hasMedia
+    if ('hasMedia' in info):
+        hasMedia = info['hasMedia']
+        if (hasMedia == "True"):
+            hasMedia = True
+        elif (hasMedia == "False"):
+            hasMedia = False
+        elif (type(hasMedia) != bool):
+            response = jsonify(status = "error", error = "HasMedia is not True or False.")
+            return response, 500
+    else:
+        # Default: false
+        hasMedia = False
+    if hasMedia:
+        query['media'] = {'$ne' : []}
+    # Check rank
+    if ('rank' in info):
+        rank = info['rank']
+        if (rank == "time"):
+            cursor = db.items.find(query).sort('timestamp', pymongo.DESCENDING).limit(limit)
+        elif (rank == "interest"):
+            cursor = db.items.find(query).sort('interest', pymongo.DESCENDING).limit(limit)
+        else:
+            response = jsonify(status = "error", error = "Invalid rank.")
+            return response, 500
+    else:
+        # Default: interest
+        rank = "interest"
+        cursor = db.items.find(query).sort('interest', pymongo.DESCENDING).limit(limit)
     its = []
     for it in cursor:
         item = {
