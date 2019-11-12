@@ -616,19 +616,22 @@ def like_item_post(item_id):
         return jsonify(status="error", error="Not found")
 
     likes = item["likes"]
+    interest = item['interest']
     if (session['username'] not in likes):
         if (toLike):
             likes.append(session['username'])
+            interest += 1
     else:
         if (not toLike): # and username is in likes
             likes.remove(session['username'])
-
+            interest -= 1
+    
     print(toLike)
     print(likes)
     db.items.update_one({
 	'_id':ObjectId(item_id)
     }, {'$set':
-	{'likes':likes}
+	{'likes':likes, 'interest':interest}
     })
     
     return jsonify(status="OK")
