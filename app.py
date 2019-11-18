@@ -45,7 +45,7 @@ def adduser_post():
     u = db.users.find_one({'username':username})
 
     if (e!=None or u!=None): ## one or both are not unique
-        return jsonify(status="error"), 500
+        return jsonify(status="error", error="duplicate username"), 500
 
     # record the email and username
     db.emails.insert({'email':email})
@@ -76,7 +76,6 @@ def login_getter():
     
 @app.route('/login', methods=['POST'])
 def login_post():
-    print('\n\n')
     info = request.json
     if (info==None):
         # info = request.args
@@ -87,7 +86,7 @@ def login_post():
     acc = db.accounts.find_one( {'username':username, 'password':password})
     print(acc)
     if (acc==None):
-        return jsonify(status="error"), 500
+        return jsonify(status="error", error="FAKE USER!!!"), 500
     session['username'] = username
 
     resp = jsonify(status="OK")
@@ -101,7 +100,7 @@ def logout_getter():
         session['username']=None
         resp = jsonify(status="OK")
         return resp, 200
-    return jsonify(status="error"), 500
+    return jsonify(status="error", error="already logged out"), 500
     # return redirect(url_for('/login'))
 
 @app.route('/verify', methods=['GET'])
@@ -124,11 +123,11 @@ def verify_post():
     v = db.verification.find_one({'email':email})
     print(v)
     if (v==None):
-        return jsonify(status="error"), 500
+        return jsonify(status="error", error="stop botting! wrong info!"), 500
     if (key!='abracadabra' and v['key'][1:-1]!=key):
         print(v['key'])
         print(key)
-        return jsonify(status="error"), 500        
+        return jsonify(status="error", error="stop botting! wrong info!"), 500
     db.accounts.insert(
         {'username':v['username'], 'email':email, 'password':v['password']})
     db.verification.remove(v)
@@ -142,11 +141,10 @@ def verify_post():
 def find_user(username):
     userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
-        return (jsonify(status="error"), 500)
+        return (jsonify(status="error", error="User = Limit(x->0) of 1/x"), 500)
     
     userStats = {"email":userInfo['email'], "followers":len(userInfo["followers"]),
                  "following":len(userInfo["following"])}
-    print(userStats)
     resp = jsonify(status="OK", user=userStats)
     return resp, 200
 @app.route('/user/<username>/followers', methods=['GET'])
@@ -155,12 +153,12 @@ def find_user_followers(username):
     if ("limit" in request.args):
         limit = request.args["limit"]
     if limit < 0: # or limit > 200:
-        return (jsonify(status="error"), 500)
+        return (jsonify(status="error", error="User = Limit(x->0) of 1/x^2"), 500)
     if limit > 200:
         limit = 200
     userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
-        return (jsonify(status="error"), 500)
+        return (jsonify(status="error", error="User = DNE"), 500)
     followers = userInfo['followers'][:limit]
     return jsonify(status="OK", users=followers), 200
 @app.route('/user/<username>/following', methods=['GET'])
@@ -169,12 +167,12 @@ def find_user_following(username):
     if ("limit" in request.args):
         limit = request.args
     if limit < 0:# or limit > 200:
-        return (jsonify(status="error"), 500)
+        return (jsonify(status="error", error="limit has to be greater than 0"), 500)
     if limit > 200:
         limit = 200
     userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
-        return (jsonify(status="error"), 500)
+        return (jsonify(status="error", error="Username DNE"), 500)
     following = userInfo['following'][:limit]
     return jsonify(status="OK", users=following), 200
 
@@ -185,7 +183,7 @@ def follow_user_getter():
 @app.route('/follow', methods=['POST'])
 def follow_user_poster():
     if ('username' not in session or session['username']==None):
-        return jsonify(status="error"), 500
+        return jsonify(status="error", error="not logged in"), 500
     info = request.json
     if (info==None):
         info = request.form
@@ -202,7 +200,7 @@ def follow_user_poster():
     # get the user the client wants to follow
     userInfo = db.stat.find_one({'username':username})
     if (userInfo==None):
-        return (jsonify(status="error"), 500)
+        return (jsonify(status="error", error="User DNE"), 500)
     # get the followers list, and adjust it depending on selection
     followers = userInfo['followers']
     if (follow):
@@ -222,7 +220,7 @@ def follow_user_poster():
     # update the client data                 
     currentUser = db.stat.find_one({'username':session['username']})
     if (currentUser==None):
-        return (jsonify(status="error"), 500)
+        return (jsonify(status="error", error="User not found"), 500)
     # get the following list, and adjust it depending on selection
     following = currentUser['following']
     if (follow):
@@ -277,8 +275,24 @@ def addItem():
         # array of media IDs
         if ('media' in info):
             media = info['media']
+            for x in media:
+                parts = x.split('---')
+                if (len(parts) < 2):
+                    return jsonify(status = "error", error = "Invalid media name."), 500
+                name = '---'.join(parts[1:])
+                if (name!=session['username']):
+                    return jsonify(status = "error", error = "Not your media."), 500
+                cluster = Cluster()
+                cass = cluster.connect("kattriller")
+                if (cass.execute("SELECT itm_cnt FROM media WHERE img_id = %s", (x, ))[0].itm_cnt == 0):
+                    cass.execute("UPDATE media SET itm_cnt = 1 WHERE img_id = %s", (x, ))
+                else:
+                    return jsonify(status = "error", error = "Media already in use."), 500
         else:
             media = []
+        print("Below is what we add to db")
+        print(media)
+        
         # Post a new item
         i = db.items.insert({'content':content, 'childType':childType, 'parent':parent, 'media':media, 'username':session['username'], 'likes':[], 'retweeted':0, 'interest':0, 'timestamp':time.time()})
         if (childType == "retweet"):
@@ -317,14 +331,14 @@ def delete_item():
                     cluster = Cluster()
                     cass = cluster.connect("kattriller")
                     for imgID in medArr:
-                        cass.execute("DELETE FROM media WHERE img_id = %s", imgID)
+                        cass.execute("DELETE FROM media WHERE img_id = %s", imgID, )
                     db.items.delete_one(query)
                     response = jsonify(status = "OK")
                     return response, 200
             else:
-                response = jsonify(status = "error")
+                response = jsonify(status = "error", error="Didn't delete")
                 return response, 500
-    response = jsonify(status = "error")
+    response = jsonify(status = "error", error="failed to delete, cause DNE?")
     return response, 500
 @app.route('/item/<id>', methods=['GET', 'DELETE'])
 def getItem(id):
@@ -348,6 +362,12 @@ def getItem(id):
             if request.method == 'DELETE':
                 # Only allowed if logged in and username matches
                 if ('username' in session and session['username'] != None and it['username'] == session['username']):
+                    
+                    medArr = db.items.find_one(query)['media']
+                    cluster = Cluster()
+                    cass = cluster.connect("kattriller")
+                    for imgID in medArr:
+                        cass.execute("DELETE FROM media WHERE img_id = %s", (imgID, ))
                     db.items.delete_one(query)
                     response = jsonify(status = "OK")
                     return response, 200
@@ -468,7 +488,7 @@ def search():
             replies = True
         elif (replies == "False"):
             replies = False
-        elif (type(hasMedia) != bool):
+        elif (type(replies) != bool):
             response = jsonify(status = "error", error = "Replies is not True or False.")
             return response
     else:
@@ -495,6 +515,7 @@ def search():
     if hasMedia:
         query['media'] = {'$ne' : []}
     # Check rank
+    print(query)
     if ('rank' in info):
         rank = info['rank']
         if (rank == "time"):
@@ -517,7 +538,9 @@ def search():
             'retweeted':it['retweeted'],
             'content':it['content'],
             'timestamp':it['timestamp'],
-            'childType':it['childType']
+            'childType':it['childType'],
+            'parent':it['parent'],
+            'media':it['media']
             }
         its.append(item)
     response = jsonify(status = "OK", items = its)
@@ -532,10 +555,10 @@ def userPosts(username):
         try:
             limit = int(limit)
         except:
-            response = jsonify(status = "error")
+            response = jsonify(status = "error", error="limit not int")
             return response, 500
         if (limit < 1):
-            response = jsonify(status = "error")
+            response = jsonify(status = "error", error="limit < 1")
             return response, 500
         if (limit > 200):
             # response = jsonify(status = "error")
@@ -560,34 +583,55 @@ def add_media_getter():
 def add_media():
     if ('username' not in session or session['username']==None):
         return jsonify(status="error", error="not logged in")
-    # info = request.form
-    # I think this is the thing? OR is it request.file?
-    # info['content']
-
+    
     cluster = Cluster()
     cass = cluster.connect("kattriller")
+        
+    if (request.files!=None):
+        #print(request.files)
+        #print("using request.files") # this is from form
+        contents = request.files['content'].read()
+        #print(len(contents))
+    else:
+        #print("using request.valus")
+        content = request.values['content']
+        #print(len(content))
+        #print("AWESOME")
 
-    file_id = float(time.time())
-    contents = request.files['contents'].read()
-    cass.execute("INSERT INTO media (img_id, itm_cnt, content) VALUES (%s, %s, %s)", (float(file_id), 0, memoryview(contents)))
-    return jsonify(status="OK", id=file_id)
+    file_id = str(time.time())+'---'+session['username']
+    # contents = request.files['content'].read()
+    x = cass.execute("INSERT INTO media (img_id, itm_cnt, content) VALUES (%s, %s, %s)", (file_id, 0, memoryview(contents)))
+    
+    return jsonify(status="OK", id=str(file_id))
 @app.route('/media/<media_id>', methods=['GET'])
 def get_media(media_id):
     cluster = Cluster()
     session = cluster.connect("kattriller")
     x = "SELECT * FROM media WHERE img_id=%s".format(str(media_id))
     
-    stuff = session.execute("SELECT * FROM media WHERE img_id=%s", [float(media_id)])
+    stuff = session.execute("SELECT * FROM media WHERE img_id=%s", [media_id])
         
     #"SELECT img_content FROM hw6.img WHERE img_filename=%s", [info['filename']])
-    print(stuff)
-    print(type(stuff))
-    print(stuff)
+    #print(type(stuff))
+    #print(stuff[0])
+    #try:
+    if (stuff==[]):
+        return jsonify(stats="error"), 400
+    
     stuff =  stuff[0].content
+    #resp = jsonify(media=stuff, stats="OK")
     resp =  make_response(stuff)
+    #resp =  make_response(stuff, jsonify(status="OK"))
     resp.headers.set('Content-Type', 'image/jpeg')
     # resp.headers.set('Content-Type', contentType)
-    return resp
+    if (stuff != None):
+        return resp, 200
+    #print("CRUD")
+    return resp, 400
+    #except Exception as e:
+    #    print(e)
+    #    print("OOH SHIT!!!!")
+    #    return jsonify(status="error", error=str(e)), 400
 
     
 @app.route('/item_liker', methods=['GET'])
@@ -606,7 +650,6 @@ def like_item_post(item_id):
     print(item_id)
     if (info==None):
         info = request.values
-        print(info["like"])
         toLike = True if info["like"]=="True" else False
     else:
         toLike = True if "like" not in info or info["like"] else False
@@ -626,8 +669,8 @@ def like_item_post(item_id):
             likes.remove(session['username'])
             interest -= 1
     
-    print(toLike)
-    print(likes)
+    #print(toLike)
+    #print(likes)
     db.items.update_one({
 	'_id':ObjectId(item_id)
     }, {'$set':
