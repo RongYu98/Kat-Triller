@@ -2,6 +2,13 @@
 <html>
         <head>
                 <title>Kat Triller Add Item</title>
+		<script type = "text/javascript">
+			function addMedia(){
+				var input = document.createElement("INPUT");
+				input.setAttribute("name", "media");
+				document.getElementById("media").appendChild(input);
+			}
+		</script>
         </head>
         <body>
                 <h1>Add Item</h1>
@@ -20,7 +27,16 @@
 			Parent:
 			<input name="parent">
 			</br>
-                        <input type="submit">
+			Media: Enter the ID of each media in separate boxes
+			</br>
+			<div id = "media">
+			<input name="media" type="text">
+			<input name="media" type="text">
+			</div>
+			<button type="button" onclick="addMedia()">Add another media</button>
+			</br>
+			</br>
+                        <input type="submit" value="Add Item">
                 </form>
                 <div>
                 </div>
