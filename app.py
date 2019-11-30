@@ -15,13 +15,16 @@ db = client["kt_db"]
 # Cassandra:
 from cassandra.cluster import Cluster
 
+logging_level = 0 # let's say 10 is error only, 30 is function only?
+
 app = Flask(__name__)
 app.permanent_session_lifetime = datetime.timedelta(days=365)
 app.secret_key = 'Kats Trilling is AWESOME!'
 
 @app.route('/', methods=['GET'])
 def index_default():
-    return redirect(url_for('adduser_getter'))
+    return render_template("index.html")
+    #return redirect(url_for('adduser_getter'))
 
 @app.route('/adduser', methods=['GET'])
 def adduser_getter():
@@ -31,8 +34,9 @@ def adduser_getter():
     
 @app.route('/adduser', methods=['POST'])
 def adduser_post():
-    print(session)
-    # print(session.items())
+    if (logging_level > 29):
+        print("adding user")
+
     info = request.json
     if (info==None):
         info = request.args
@@ -40,6 +44,8 @@ def adduser_post():
     password = info['password']
     email = info['email'] # unique
 
+    # print("Accessing DB for logs")
+    
     # check for uniqueness of username and email in db
     e = db.emails.find_one({'email':email}) 
     u = db.users.find_one({'username':username})
@@ -76,15 +82,17 @@ def login_getter():
     
 @app.route('/login', methods=['POST'])
 def login_post():
+    if (logging_level > 29):
+        print("logging in")
     info = request.json
     if (info==None):
         # info = request.args
         info = request.form
     username = info['username']
     password = info['password']
-    print(info)
+    # print(info)
     acc = db.accounts.find_one( {'username':username, 'password':password})
-    print(acc)
+    # print(acc)
     if (acc==None):
         return jsonify(status="error", error="FAKE USER!!!"), 500
     session['username'] = username
@@ -94,8 +102,8 @@ def login_post():
 
 @app.route('/logout', methods=['GET', 'POST'])
 def logout_getter():
-    print(session)
-    print("AWESOME\n")
+    if (logging_level > 29):
+        print("logging out")
     if ('username' in session and session['username']!=None):
         session['username']=None
         resp = jsonify(status="OK")
@@ -111,17 +119,17 @@ def verify_get():
     
 @app.route('/verify', methods=['POST'])
 def verify_post():
-    print('\n\n\n')
+    if (logging_level > 29):
+        print("verifying")
     info = request.json
     if (info==None):
         info = request.args
-    print(info)
+        
     email = info['email']
     key = info['key']
-    print(email, key)
-    # verify that it exists and is correct
+
+    # verify email exists in db
     v = db.verification.find_one({'email':email})
-    print(v)
     if (v==None):
         return jsonify(status="error", error="stop botting! wrong info!"), 500
     if (key!='abracadabra' and v['key'][1:-1]!=key):
@@ -182,12 +190,14 @@ def follow_user_getter():
     return render_template('follow_user.html')
 @app.route('/follow', methods=['POST'])
 def follow_user_poster():
+    if (logging_level > 29):
+        print("following user")
     if ('username' not in session or session['username']==None):
         return jsonify(status="error", error="not logged in"), 500
     info = request.json
     if (info==None):
         info = request.form
-    print("USERNAME: "+session['username']+" "+"PROFILE: "+info["username"])
+    # print("USERNAME: "+session['username']+" "+"PROFILE: "+info["username"])
     username = info["username"]
     if ('follow' not in info):
         follow=True
@@ -245,10 +255,12 @@ def additem_getter():
 
 @app.route('/additem', methods=['POST'])
 def addItem():
+    if (logging_level > 29):
+        print("adding item")
     # Only allowed if logged in
     if ('username' in session and session['username'] != None):
         info = request.json
-        if (info==None):
+        if (info == None):
             info = request.form
         # body of item
         if ('content' in info):
@@ -268,30 +280,47 @@ def addItem():
         else:
             childType = None
         # ID of the original item being responded to or retweeted
-        if ('parent' in info):
+        if ('parent' in info and info['parent'] != ''):
             parent = info['parent']
+            # Check if parent ID exists
+            if len(parent) == 24:
+                query = {'_id':ObjectId(parent)}
+                if (db.items.find_one(query) == None):
+                    return jsonify(status = "error", error = "Parent not found.")
+            else:
+                return jsonify(status = "error", error = "Invalid ID.")
         else:
             parent = None
         # array of media IDs
-        if ('media' in info):
+        if ('media' in info and info['media'] != ''):
             media = info['media']
-            for x in media:
-                parts = x.split('---')
-                if (len(parts) < 2):
-                    return jsonify(status = "error", error = "Invalid media name."), 500
-                name = '---'.join(parts[1:])
-                if (name!=session['username']):
-                    return jsonify(status = "error", error = "Not your media."), 500
-                cluster = Cluster()
-                cass = cluster.connect("kattriller")
-                if (cass.execute("SELECT itm_cnt FROM media WHERE img_id = %s", (x, ))[0].itm_cnt == 0):
-                    cass.execute("UPDATE media SET itm_cnt = 1 WHERE img_id = %s", (x, ))
-                else:
-                    return jsonify(status = "error", error = "Media already in use."), 500
+            if (type(media) == list):
+                print("Hip hip array!")
+                print(media)
+                for x in media:
+                    parts = x.split('---')
+                    if (len(parts) < 2):
+                        return jsonify(status = "error", error = "Invalid media name."), 500
+                    name = '---'.join(parts[1:])
+                    if (name!=session['username']):
+                        return jsonify(status = "error", error = "Not your media."), 500
+                    cluster = Cluster()
+                    cass = cluster.connect("kattriller")
+                    if (cass.execute("SELECT itm_cnt FROM media WHERE img_id = %s", (x, ))[0].itm_cnt == 0):
+                        cass.execute("UPDATE media SET itm_cnt = 1 WHERE img_id = %s", (x, ))
+                    else:
+                        return jsonify(status = "error", error = "Media already in use."), 500
+            else:
+                print("Parse from form")
+                print(media)
         else:
-            media = []
-        print("Below is what we add to db")
-        print(media)
+            media = request.form.getlist('media')
+            if (media):
+                print(media)
+            else:
+                media = []
+        # print("Below is what we add to db")
+        # print(media)
         
         # Post a new item
         i = db.items.insert({'content':content, 'childType':childType, 'parent':parent, 'media':media, 'username':session['username'], 'likes':[], 'retweeted':0, 'interest':0, 'timestamp':time.time()})
@@ -315,6 +344,8 @@ def delete_item_finder():
     return render_template("delete.html")
 @app.route('/delete_item', methods=['POST'])
 def delete_item():
+    if (logging_level > 29):
+        print("deleting item")
     info = request.form
     if ("item_id" not in request.form):
         return jsonify(status="error")
@@ -342,6 +373,8 @@ def delete_item():
     return response, 500
 @app.route('/item/<id>', methods=['GET', 'DELETE'])
 def getItem(id):
+    if (logging_level > 29):
+        print("/item/<id>")
     if len(id) == 24:
         query = {'_id':ObjectId(id)}
         it = db.items.find_one(query)
@@ -581,6 +614,8 @@ def add_media_getter():
 
 @app.route('/addmedia', methods=["POST"])
 def add_media():
+    # forward the request to 130.245.171.150:80/add_media?
+    
     if ('username' not in session or session['username']==None):
         return jsonify(status="error", error="not logged in")
     
@@ -691,5 +726,6 @@ def filler():
     
 if __name__ == "__main__":
     #filler()
+    # sudo gunicorn3 --workers=8 --reload app:app
+    # app.run(host='0.0.0.0', port=80, debug=True)
     app.run(host='0.0.0.0', port=80, debug=True)
-    
