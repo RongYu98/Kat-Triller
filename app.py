@@ -224,7 +224,8 @@ def find_user(username):
 	#if json_request():
 		#return jsonify(status="OK", user=userStats), 200
 	follow = follow_button(userInfo["followers"], username)
-	return render_template("user.html", user=username, data=userStats, follow=follow)
+	count = follow_count(userInfo)
+	return render_template("user.html", user=username, data=userStats, follow=follow, count=count)
 
 
 @app.route('/user/<username>/posts', methods=['GET'])
@@ -256,7 +257,7 @@ def user_posts(username):
 
 	follow = follow_button(userInfo["followers"], username)
 	count = follow_count(userInfo)
-	return render_template("posts.html", user=username, data=get_tweets(cursor), follow=follow, count=count)
+	return render_template("user.html", user=username, data=get_tweets(cursor), follow=follow, count=count, page="posts")
 	#return jsonify(status="OK", items=ids), 200
 
 
@@ -275,7 +276,7 @@ def find_user_followers(username):
 	followers = userInfo['followers'][:limit]
 	follow = follow_button(userInfo["followers"], username)
 	count = follow_count(userInfo)
-	return render_template("followers.html", user=username, data=followers, follow=follow, count=count)
+	return render_template("user.html", user=username, data=followers, follow=follow, count=count, page="followers")
 	#return jsonify(status="OK", users=followers), 200
 
 
@@ -294,7 +295,7 @@ def find_user_following(username):
 	following = userInfo['following'][:limit]
 	follow=follow_button(userInfo["followers"], username)
 	count = follow_count(userInfo)
-	return render_template("following.html", user=username, data=following, follow=follow, count=count)
+	return render_template("user.html", user=username, data=following, follow=follow, count=count, page="following")
 	#return jsonify(status="OK", users=following), 200
 
 

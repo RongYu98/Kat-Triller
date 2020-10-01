@@ -49,11 +49,93 @@
 			</div>
 		</div>
 		<div class="tweets column">
-			<div class="header">
-				<h1>{{ user }}'s Content</h1>
-			</div><div class="tweet">
-				Click on a link to view {{ user }}'s followers, followings, and posts here
-			</div>
+			{% if page == "followers" %}
+				<div class="header">
+					<h1>{{ user }}'s Followers</h1>
+				</div>
+				{% if data == [] %}
+					<div class="tweet">
+						{{user}} has no followers... Be the first!
+					</div>
+				{% endif %}
+				{% for item in data %}
+					<div class="tweet">
+						<i class="fa fa-user-circle"></i>
+						<a href="{{ url_for('find_user', username=item) }}">{{ item }}</a>
+					</div>
+				{% endfor %}
+			{% elif page == "following" %}
+				<div class="header">
+					<h1>{{ user }}'s Following</h1>
+				</div>
+				{% if data == [] %}
+					<div class="tweet">
+						{{user}} is not following anyone
+					</div>
+				{% endif %}
+				{% for item in data %}
+					<div class="tweet">
+						<i class="fa fa-user-circle"></i>
+						<a href="{{ url_for('find_user', username=item) }}">{{ item }}</a>
+					</div>
+				{% endfor %}
+			{% elif page == "posts" %}
+				<div class="header">
+					<h1>{{ user }}'s Posts</h1>
+				</div>
+				{% if data == [] %}
+					<div class="tweet">
+						{{user}} has not posted anything yet
+					</div>
+				{% endif %}
+				{% for item in data %}
+					<div class="tweet">
+						<a href="{{ url_for('get_item', id=item.id) }}" class="tweet-link"></a>
+						<div>
+							<i class="fa fa-user-circle"></i>
+							<a href="{{ url_for('find_user', username=item.username) }}" class="username">{{ item.username }}</a>
+							<span class="date">
+								&middot {{ item.date }}
+							</span>
+						</div>
+						{% if item.childType == "reply" %}
+							<div class="tweet-content">
+								Replying to <a href="{{ url_for('get_item', id=item.parent) }}" class="parent">this post</a>
+							</div>
+						{% endif %}
+						{% if item.childType == "retweet" %}
+							<div class="tweet-content">
+								Retweeting <a href="{{ url_for('get_item', id=item.parent) }}" class="parent">this post</a>
+							</div>
+						{% endif %}
+						<div class="tweet-content">
+							{{ item.content }}
+						</div>
+						{% for img in item.img %}
+							<div class="tweet-img">
+								<a href="{{ url_for('get_media', media_id=img.id) }}">
+									<img class="tweet-img" src="data:;base64,{{ img.content }}"/>
+								</a>
+							</div>
+						{% endfor %}
+						<div class="tweet-content">
+							<span class="stats">
+								<i class="fa fa-thumbs-up"></i> {{ item.property.likes }}
+							</span>
+							<span class="stats">
+								<i class="fa fa-retweet"></i> {{ item.retweeted }}
+							</span>
+						</div>
+					</div>
+				{% endfor %}
+			{% else %}
+				<div class="header">
+					<h1>{{ user }}'s Content</h1>
+				</div>
+				<div class="tweet">
+					Click on a link to view {{ user }}'s followers, followings, and posts here
+				</div>
+			{% endif %}
 		</div>
 	</body>
 </html>
