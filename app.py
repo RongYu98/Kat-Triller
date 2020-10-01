@@ -84,7 +84,7 @@ def index_default():
 @app.route('/add_user', methods=['GET'])
 def adduser_getter():
 	if 'username' not in request.args or 'password' not in request.args or 'email' not in request.args:
-		return render_template("add_user.html")
+		return render_template("register.html")
 	return adduser_post()
 
 	
@@ -397,6 +397,7 @@ def add_item():
 		media = info['media']
 		if (type(media) != list):
 			media = request.form.getlist('media')
+		print(media)
 		for m in media:
 			if (cass.execute("SELECT itm_cnt FROM media WHERE id = %s AND owner = %s", (m, session['username']))[0].itm_cnt == 0):
 				cass.execute("UPDATE media SET itm_cnt = 1 WHERE id = %s AND owner = %s", (m, session['username']))

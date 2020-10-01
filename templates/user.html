@@ -36,10 +36,10 @@
 			</h2>
 			<div class="profile-links">
 				<a href="{{ url_for('find_user_followers', username=user) }}">
-					<span>{{ data.followers }}</span> Followers
+					<span>{{ count.followers }}</span> Followers
 				</a>
 				<a href="{{ url_for('find_user_following', username=user) }}">
-					<span>{{ data.following }}</span> Following
+					<span>{{ count.following }}</span> Following
 				</a>
 			</div>
 			<div class="profile-links">
