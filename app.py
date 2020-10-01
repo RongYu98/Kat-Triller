@@ -9,7 +9,6 @@ import datetime
 import utils
 import time
 import uuid
-import os
 
 # One database
 client = MongoClient("mongodb://localhost:27017/")
