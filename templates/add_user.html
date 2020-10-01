@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<title>Kat-Triller - Login</title>
+		<title>Kat-Triller - Sign Up</title>
 		<link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
 		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/page.css') }}">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -11,8 +11,12 @@
 	<body class="bg-img">
 		<div class="account">
 			<div class="center">
-				<h1>Login to Kat-Triller</h1>
-				<form method="post" action="/login" enctype="application/json">
+				<h1>Register</h1>
+				<form method="post" action="/add_user" enctype="application/json">
+					<div class="input">
+						Email
+						<input type="text" name="email" required>
+					</div>
 					<div class="input">
 						Username
 						<input type="text" name="username" required>
@@ -21,15 +25,15 @@
 						Password
 						<input type="password" name="password" required>
 					</div>
-					<input type="submit" value="Login" class="regular">
+					<input type="submit" value="Register" class="regular">
 				</form>
-				<div class="top-padding">
-					Need an account?
-					<a href="/add_user" class="account-link">Sign up for Kat-Triller</a>
-				</div>
 				<div class="top-padding">
 					Need to verify your account?
 					<a href="/verify" class="account-link">Verify your account</a>
+				</div>
+				<div class="top-padding">
+					Already have a verified account?
+					<a href="/login" class="account-link">Login to Kat-Triller</a>
 				</div>
 				<div class="top-padding error">
 					{{ message }}

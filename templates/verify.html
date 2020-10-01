@@ -1,14 +1,40 @@
+<!DOCTYPE HTML>
 <html>
-  <link rel= "stylesheet" type= "text/css" href= "../static/styles/page.css">
-  <!-- https://www.w3schools.com/html/html_forms.asp AWESOME Tutorial -->
-  <!-- helped a lot in making this form -->
-  <body>
-    <form method="get" action="/verify" enctype="application/json">
-      Email: <br>
-      <input type="text" name="email"><br>
-      Key: <br>
-      <input type="text" name="key"><br>
-      <input type="submit" value="Verify">
-    </form>
-  </body>
+	<head>
+		<title>Kat-Triller - Verify Account</title>
+		<link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/page.css') }}">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+		<!-- https://www.w3schools.com/html/html_forms.asp AWESOME Tutorial -->
+		<!-- helped a lot in making this form -->
+	</head>
+	<body class="bg-img">
+		<div class="account">
+			<div class="center">
+				<h1>Verify User</h1>
+				<form method="post" action="/verify" enctype="application/json">
+					<div class="input">
+						Email
+						<input type="text" name="email" required>
+					</div>
+					<div class="input">
+						Key
+						<input type="text" name="key" required>
+					</div>
+					<input type="submit" value="Verify" class="regular">
+				</form>
+				<div class="top-padding">
+					Need an account?
+					<a href="/add_user" class="account-link">Sign up for Kat-Triller</a>
+				</div>
+				<div class="top-padding">
+					Already have a verified account?
+					<a href="/login" class="account-link">Login to Kat-Triller</a>
+				</div>
+				<div class="top-padding error">
+					{{ message }}
+				</div>
+			</div>
+		</div>
+	</body>
 </html>

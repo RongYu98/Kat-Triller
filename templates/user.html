@@ -1,0 +1,59 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Kat-Triller - {{ user }}'s Profile</title>
+		<link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/page.css') }}">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	</head>
+	<body>
+		<div class="nav column">
+			<ul>
+				<li><a href="/"><i class="fa fa-home"></i> Home</a></li>
+				<li><a href="/search"><i class="fa fa-search"></i> Search</a></li>
+				<li><a href="/logout"><i class="fa fa-sign-out"></i> Log Out</a></li>
+			</ul>
+		</div>
+		<div class="content column">
+			<div class="banner">
+			</div>
+			<div class="user-icon">
+				<i class="fa fa-user-circle"></i>
+			</div>
+			{% if follow != None %}
+				<form method="POST" action="/follow" enctype="application/json" class="follow-button">
+					<input type="hidden" name="username" value="{{ user }}">
+					<input type="hidden" name="follow" value="{{ follow }}">
+					{% if follow %}
+						<input type="submit" value="Follow" class="inverted">
+					{% else %}
+						<input type="submit" value="Following" class="regular">
+					{% endif %}
+				</form>
+			{% endif %}
+			<h2 class="top-padding">
+				{{ user }}
+			</h2>
+			<div class="profile-links">
+				<a href="{{ url_for('find_user_followers', username=user) }}">
+					<span>{{ data.followers }}</span> Followers
+				</a>
+				<a href="{{ url_for('find_user_following', username=user) }}">
+					<span>{{ data.following }}</span> Following
+				</a>
+			</div>
+			<div class="profile-links">
+				<a href="{{ url_for('user_posts', username=user) }}">
+					<span>Posts</span>
+				</a>
+			</div>
+		</div>
+		<div class="tweets column">
+			<div class="header">
+				<h1>{{ user }}'s Content</h1>
+			</div><div class="tweet">
+				Click on a link to view {{ user }}'s followers, followings, and posts here
+			</div>
+		</div>
+	</body>
+</html>

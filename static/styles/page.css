@@ -1,0 +1,260 @@
+* {
+	margin: 0;
+	padding: 0;
+	font-family: "Helvetica", "Arial";
+}
+*, *:focus, *:hover {
+	outline:none;
+}
+html, body {
+	height: 100%;
+}
+.bg-img {
+	background-image: url("/static/images/bg.png");
+}
+h1 {
+	padding-bottom: 10px;
+}
+a {
+	text-decoration: none;
+	color: black;
+}
+a:hover, .active {
+	color: dodgerblue;
+}
+input[type=text], input[type=password], input[type=number], textarea {
+	display: block;
+	margin-top: 5px;
+	width: 330px;
+	border: none;
+	background-color: whitesmoke;
+	font-size: 15px;
+}
+input[type=file] {
+	display: block;
+	width: 350px;
+	background-color: whitesmoke;
+}
+textarea {
+	resize: none;
+}
+input[type=submit], .buttons {
+	border-radius: 50px;
+	padding: 10px 30px;
+	font-size: 15px;
+	margin-top: 10px;
+	font-weight: bold;
+	cursor: pointer;
+}
+.regular, .buttons {
+	background-color: dodgerblue;
+	color: white;
+	border: none;
+}
+.inverted {
+	background-color: white;
+	color: dodgerblue;
+	border: 1px solid dodgerblue;
+}
+.regular:hover {
+	background-color: steelblue;
+	color: white;
+}
+.inverted:hover {
+	background-color: aliceblue;
+}
+.button-wrapper {
+	margin-top: 40px;
+}
+.account {
+	padding: 60px 0;
+}
+.center {
+	position: relative;
+	text-align: center;
+	width: 500px;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 50px 0px;
+	background-color: white;
+	box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 0.2), 0 5px 10px 0 rgba(0, 0, 0, 0.1);
+	border-radius: 5%;
+}
+.center form {
+	display: inline-block;
+}
+.error {
+	color: red;
+}
+.column {
+	float: left;
+	padding-top: 20px;
+	height: 100%;
+	overflow: auto;
+	box-sizing: border-box;
+	position: relative;
+}
+/* Navigation bar */
+.nav {
+	list-style-type: none;
+	width: 140px;
+	border-right: 1px solid gainsboro;
+}
+li a {
+	display: block;
+	padding: 8px 16px;
+	font-size: 20px;
+}
+li a:hover, li > .active {
+	background-color: aliceblue;
+}
+.content {
+	width: 395px;
+	padding-left: 20px;
+	box-sizing: border-box;
+}
+.content .tweet-img {
+	max-width: 350px;
+}
+.input {
+	background-color: whitesmoke;
+	color: dimgray;
+	width: 330px;
+	padding: 5px 10px;
+	margin-bottom: 15px;
+	font-size: 15px;
+	border-bottom: 3px solid dimgray;
+	border-radius: 3px;
+}
+.input:focus-within {
+	border-bottom: 3px solid dodgerblue;
+	color: dodgerblue;
+}
+.empty {
+	padding: 5px 0;
+}
+.attach {
+	max-height: 150px;
+	overflow: auto;
+}
+.media {
+	display: none;
+}
+.media:checked + label {
+	border: 3px solid dodgerblue;
+	box-sizing: border-box;
+}
+.thumbnail {
+	width: 155px;
+	height: 147px;
+	position: relative;
+	overflow: hidden;
+	display: inline-block;
+}
+.thumbnail img {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	height: 100%;
+	width: auto;
+	-webkit-transform: translate(-50%,-50%);
+	-ms-transform: translate(-50%,-50%);
+	transform: translate(-50%,-50%);
+}
+.tweets {
+	float: right;
+	border-left: 1px solid gainsboro;
+	width: calc(100% - 535px);
+}
+.header {
+	border-bottom: 1px solid gainsboro;
+	padding: 0 20px;
+}
+.tweet {
+	border-bottom: 1px solid gainsboro;
+	padding: 20px 20px;
+	position: relative;
+}
+.tweet:hover {
+	background-color: aliceblue;
+}
+.tweet-link {
+	position: absolute;
+	display: block;
+	height: auto;
+	width: 100%;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+}
+.tweet-content {
+	padding-top: 10px;
+}
+.tweet-img {
+	max-width: 100%;
+}
+.username, .tweet-img, .parent, .account-link, .buttons {
+	position: relative;
+	font-weight: bold;
+	z-index: 1;
+}
+.date {
+	color: dimgray;
+}
+.stats {
+	display: inline-block;
+	width: 90px;
+}
+.stats button {
+    background:none;
+    border:none;
+    margin:0;
+    padding:0;
+    cursor: pointer;
+    font-size: 16px;
+}
+.top-padding {
+	padding-top: 20px;
+}
+.False {
+	color: dodgerblue;
+}
+.banner {
+	position: absolute;
+	width: 435px;
+	height: 100px;
+	top: 0;
+	left: 0;
+	z-index: -1;
+	background-color: dodgerblue;
+}
+.user-icon {
+	position: relative;
+	border-radius: 50%;
+	width: 148px;
+	height: 148px;
+	background-color: dodgerblue;
+	box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 0.3), 0 5px 10px 0 rgba(0, 0, 0, 0.2);
+}
+.user-icon i {
+	position: absolute;
+	top: -1px;
+	left: -1px;
+	font-size: 150px;
+	color: white;
+}
+.follow-button {
+	position: absolute;
+	top: 110px;
+	right: 40px;
+}
+.profile-links {
+	padding-top: 15px;
+}
+.profile-links a {
+	margin-right: 15px;
+}
+.profile-links > a > span {
+	font-weight: bold;
+}

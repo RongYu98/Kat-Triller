@@ -1,28 +1,33 @@
+<!DOCTYPE HTML>
 <html>
-  <link rel= "stylesheet" type= "text/css" href= "../static/styles/page.css">
-
-  <body>
-
-    <a href="/adduser" target="_blank">Add An Account</a>
-    <br>
-    <a href="/verify" target="_blank">Verify Your Account</a>
-    <br>
-    <a href="/login" target="_blank">Login Here</a>
-    <br>
-    <a href="/additem" target="_blank">Add Item</a>
-    <br>
-    <a href="/search" target="_blank">Search</a>
-    <br>
-    <a href="/follow" target="_blank">Follow</a>
-    <br>
-    <a href="/delete_item" target="_blank">Delete an item</a>(Separate from directly going to /item/&lt;id&gt;)
-    <br>
-    <a href="/item_liker" target="_blank">Like an item (need to login first though) </a>
-    <br>
-    <a href="/addmedia" target="_blank">Add a media!</a>
-    <br>
-    For all GET Requests, like user/&lt;username&gt;, please directly type it so into the url.
-      <br>
-    <a href="/logout" target="_blank">Log Out</a>
-  </body>
+	<head>
+		<title>Kat-Triller</title>
+		<link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+		<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/page.css') }}">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	</head>
+	<body class="bg-img">
+		<div class="account">
+			<div class="center">
+				<h1>Welcome to Kat-Triller!</h1>
+				<div class="top-padding">
+					Trill: /tril/ <span style="font-style:italic">verb</span>
+				</div>
+				<div class="top-padding">
+					Produce a quavering or warbling sound.
+				</div>
+				<div>
+					<div class="button-wrapper">
+						<a class="regular buttons" href="/add_user">Sign Up</a>
+					</div>
+					<div class="button-wrapper">
+						<a class="inverted buttons" href="/verify">Verify Account</a>
+					</div>
+					<div class="button-wrapper">
+						<a class="regular buttons" href="/login">Login</a>
+					</div>
+				</div>
+		</div>
+		</div>
+	</body>
 </html>
